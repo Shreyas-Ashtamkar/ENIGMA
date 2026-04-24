@@ -2,7 +2,13 @@ from utils.Tool import Tool
 from utils.ai import _AI
 from types import SimpleNamespace
 from utils.system_prompts import SYSTEM_PROMPT
-from configs.tools import *
+from configs.tools import (
+    hint_conversation,
+    hint_error,
+    get_weather_data,
+    get_time_data,
+    generate_image
+)
 from os import system
 
 DEBUG   = True

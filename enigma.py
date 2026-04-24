@@ -1,8 +1,16 @@
 import json
 from utils.ai import _AI, _Request, _format_message
 from utils.Tool import Tool
-
-from configs.config import *
+from configs.config import (
+    DEBUG,
+    VERBOSE,
+    MAX_RETRY,
+    print1,
+    print2,
+    print3,
+    print4,
+    AI
+)
 
 def _stringify_conversation(conversation:list):
     conversation = conversation[::-1][:3][::-1]
