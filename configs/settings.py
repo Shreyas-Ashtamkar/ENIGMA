@@ -1,0 +1,3 @@
+DEBUG = True
+VERBOSE = 3
+MAX_RETRY = 2

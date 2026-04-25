@@ -29,13 +29,13 @@
   - Fix: Create empty `__init__.py` in `configs/__init__.py` and `utils/__init__.py`
   - Violates: PEP 420 namespace packages convention
 
-- [ ] **5. Configuration Mixed with Business Logic**
+- [x] **5. Configuration Mixed with Business Logic**
   - Location: `configs/config.py` (95 lines)
   - Issue: Tool implementations, Tool registration, AI setup all mixed
   - Fix: Split into separate modules:
     - `configs/settings.py` - DEBUG, VERBOSE, MAX_RETRY only
     - `configs/logging.py` - print1-4 setup
-    - `tools/registry.py` - Tool registration
+    - `configs/registry.py` - Tool registration
   - References: `configs/config.py:19-26` (tools), lines 22-62 (registration), lines 65-95 (AI setup)
 
 - [ ] **6. Overly Broad "utils" Directory**
