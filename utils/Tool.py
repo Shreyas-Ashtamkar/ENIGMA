@@ -31,29 +31,29 @@ class Tool:
     
         
     
-    @staticmethod 
-    def parameter(type_:str, description:str, required:bool=True):
+    @classmethod 
+    def parameter(cls, type_:str, description:str, required:bool=True):
         return {
             'type': type_,
             'description': description,
             'required':required
         }
     
-    @staticmethod 
-    def create(fname:str, description:str, exec:FunctionType=lambda x: '', **params:dict[str,any]):
-        new_tool = Tool(
+    @classmethod 
+    def create(cls, fname:str, description:str, exec:FunctionType=lambda x: '', **params:dict[str,any]):
+        new_tool = cls(
             exec = exec,
             fname = fname,
             description = description,
             **params
         )
-        Tool._box[fname] = new_tool
+        cls._box[fname] = new_tool
         return new_tool
     
     
-    @staticmethod 
-    def get(fname:str) -> 'Tool':
-        return Tool._box.get(fname)
+    @classmethod 
+    def get(cls, fname:str) -> 'Tool':
+        return cls._box.get(fname)
     
     
     @staticmethod

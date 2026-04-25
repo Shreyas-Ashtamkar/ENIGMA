@@ -4,16 +4,21 @@ from utils.Tool import Tool
 from configs.config import (
     DEBUG,
     VERBOSE,
-    MAX_RETRY,
     print1,
     print2,
     print3,
     print4,
     AI
 )
+from configs.constants import (
+    CONVERSATION_CONTEXT_WINDOW,
+    TASK_PREFIX,
+    NO_TASK_MARKER,
+    MAX_RETRY_ATTEMPTS
+)
 
 def _stringify_conversation(conversation:list):
-    conversation = conversation[::-1][:3][::-1]
+    conversation = conversation[::-1][:CONVERSATION_CONTEXT_WINDOW][::-1]
     string_conversation = ""
     for message in conversation:
         role, content = message['role'], message['content']
@@ -24,9 +29,9 @@ def _stringify_conversation(conversation:list):
     return string_conversation.strip()
 
 
-def _get_summary(conversation:list[dict[str,str]]=None) -> str:
+def _get_summary(conversation:list[dict[str, str]]=None) -> str:
     conversation = _stringify_conversation(conversation)
-    if len(conversation) < 1: return "NO_SPECIFIC_TASK"
+    if len(conversation) < 1: return NO_TASK_MARKER
     summary:str = AI.summary.simple_chat(conversation).split("\n")[0].strip()
     print2("\n----------_get_summary called----------")
     print3(summary)
@@ -36,11 +41,11 @@ def _get_summary(conversation:list[dict[str,str]]=None) -> str:
 def _get_request(summary:str) -> _Request:
     request = _Request(type_="CONVERSATION", data_="")
     
-    if "NO_SPECIFIC_TASK" in summary:
+    if NO_TASK_MARKER in summary:
         request.type_ = "CONVERSATION"
-    elif "Do this - " in summary:
+    elif TASK_PREFIX in summary:
         request.type_ = "FUNCTION"
-        request.data_ = summary.split("\n")[0][10:]
+        request.data_ = summary.split("\n")[0][len(TASK_PREFIX):]
     
     print2("\n------------_get_request called-------------")
     print3(f"Type:{request.type_} \nData:'{request.data_}'")
@@ -58,7 +63,7 @@ def _get_tool(task:str):
     return tool_details
 
 
-def _run_tool(tool_details:dict):
+def _run_tool(tool_details:dict[str, any]):
     tool_name:Tool   = tool_details.get('tool')
     tool_kwargs:dict = tool_details.get('tool_kwargs') or {}
     tool = Tool.get(tool_name)
@@ -67,7 +72,7 @@ def _run_tool(tool_details:dict):
     print3(tool_response)
     return tool_response
 
-def _response_conversation(conversation:list[dict[str:str]]) -> str:
+def _response_conversation(conversation:list[dict[str, str]]) -> str:
     print2("\n------------_response_conversation called-------------")
     print3(conversation)
     chat_response = AI.responder.chat(conversation)
@@ -75,7 +80,7 @@ def _response_conversation(conversation:list[dict[str:str]]) -> str:
     return chat_response
 
     
-def _continue_conversation(conversation:list[dict[str:str]]) -> str:
+def _continue_conversation(conversation:list[dict[str, str]]) -> str:
     print2("\n------------_continue_conversation called-------------")
     chat_response = AI.conversation.chat(conversation)
     print3(chat_response)
