@@ -1,0 +1,15 @@
+{
+  "name": "read_file",
+  "extention": "py",
+  "language": "python",
+  "code": "def read_file(filepath, **kwargs):\n    print(\"CALLED: read_file\", \"\\nPASSED :\", filepath)\n    return f\"Content of {filepath}\"",
+  "expected output": "string",
+  "description": "Read the contents of a file",
+  "parameters": {
+    "filepath": {
+      "type": "string",
+      "description": "Path to the file",
+      "required": true
+    }
+  }
+}

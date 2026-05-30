@@ -1,0 +1,15 @@
+{
+  "name": "read_db",
+  "extention": "py",
+  "language": "python",
+  "code": "def read_db(query, **kwargs):\n    print(\"CALLED: read_db\", \"\\nPASSED :\", query)\n    return f\"Results for {query}\"",
+  "expected output": "string",
+  "description": "Read from a database",
+  "parameters": {
+    "query": {
+      "type": "string",
+      "description": "Database query",
+      "required": true
+    }
+  }
+}
