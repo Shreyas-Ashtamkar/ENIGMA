@@ -1,4 +1,6 @@
-import ollama
+import json
+from openai import OpenAI
+from typing import Callable
 
 def _format_message(message, role='user'):
     return {
@@ -6,14 +8,15 @@ def _format_message(message, role='user'):
         'content' : message
     }
 
-class _AI:
-    def __init__(self, model, prompt, json_response=False, **kwargs) -> None:
+class Enigma:
+    def __init__(self, model, prompt, json_response=False, client=None, **kwargs) -> None:
         self.model:str                  = model
         self.prompt:str                 = prompt
         self.default_response:str       = ""
         self.json_response:bool         = json_response
-        self.response_tester:function   = lambda x: True
+        self.response_tester:Callable   = lambda x: True
         self.options:dict               = {}
+        self.client                     = client
         
         for arg, value in kwargs.items():
             if arg == "default_response":
@@ -28,12 +31,40 @@ class _AI:
         
         message_history = list(filter(lambda x: x['role']!='system', message_history))
         
-        assistant_response = ollama.chat(
-            model    = self.model,
-            messages = [_format_message(self.prompt, 'system')] + message_history,
-            format   = 'json' if self.json_response else '',
-            options  = self.options
-        )['message']['content'].strip()
+        messages = [_format_message(self.prompt, 'system')] + message_history
+        
+        kwargs = {}
+        if self.json_response:
+            kwargs['response_format'] = {"type": "json_object"}
+        kwargs.update(self.options)
+        
+        if self.client:
+            response = self.client.chat.completions.create(
+                model    = self.model,
+                messages = messages,
+                **kwargs
+            )
+        else:
+            client = OpenAI()
+            response = client.chat.completions.create(
+                model    = self.model,
+                messages = messages,
+                **kwargs
+            )
+        
+        message = response.choices[0].message
+        if message.tool_calls:
+            tool_call = message.tool_calls[0]
+            try:
+                args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+            except Exception:
+                args = {}
+            assistant_response = json.dumps({
+                "tool": tool_call.function.name,
+                "tool_kwargs": args
+            })
+        else:
+            assistant_response = message.content.strip() if message.content else ""
         
         try:
             if not self.response_tester(assistant_response):
