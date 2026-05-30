@@ -1,6 +1,54 @@
 import json
-import enigma
-from utils.gui import restart_chat, st, init_chatbox, new_message, get_messages, show_message, ai_reply
+import utils
+from typing import Callable, Any
+import streamlit as st
+from core.logging import logging
+
+from streamlit.delta_generator import DeltaGenerator
+
+INITIAL_CHATS:list[dict[str,str]] = [
+    {
+        'role': "assistant",
+        'content': f"Hello I am Enigma. How may I help you?.",
+    }
+]
+
+def restart_chat():
+    if "chat_history" in st.session_state:
+        init_chat()
+
+def init_chat():
+    logging.info("---------------New Chat--------------------")
+    logging.info("Called init_chat")
+    st.session_state["chat_history"] = INITIAL_CHATS
+    
+    return st.session_state["chat_history"]
+
+
+def get_messages():
+    if "chat_history" not in st.session_state:
+        init_chat()
+    return st.session_state["chat_history"]
+
+
+def init_chatbox(height=550, container:Any=st): #type: ignore
+    return container.container(height=height, border=True)
+
+
+def show_message(role='user', msg='This is new message', container=st):
+    return container.chat_message(role).write(msg)
+
+
+def new_message(role: str = "user", msg: str = "This is new message", container=st):
+    st.session_state["chat_history"].append({'role': role, 'content': msg})
+    return show_message(role, msg, container)
+
+
+def ai_reply(container:DeltaGenerator, ai:Callable): #type: ignore
+    response = ai(get_messages())
+    container.chat_message('assistant').write(response)
+
+    st.session_state["chat_history"].append({'role': 'assistant', 'content': response})
 
 st.set_page_config(initial_sidebar_state="collapsed")
 
@@ -22,5 +70,5 @@ with message_box:
 
     if prompt := messages_container.chat_input(f"Type your message"):
         new_message(msg=prompt)
-        ai_reply(container=message_box, ai=enigma.process)
+        ai_reply(container=message_box, ai=utils.enigma.process)
     
