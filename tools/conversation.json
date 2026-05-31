@@ -1,0 +1,15 @@
+{
+  "name": "conversation",
+  "extention": "py",
+  "language": "python",
+  "code": "def conversation(message=None, **kwargs):\n    print(f\"CALLED: conversation\\nPASSED : message={message}, kwargs={kwargs}\")\n    if message:\n        return message\n    if \"message\" in kwargs:\n        return kwargs[\"message\"]\n    return \"Okay, let's talk.\"",
+  "expected output": "string",
+  "description": "Responding with only the topic of the conversation.",
+  "parameters": {
+    "message": {
+      "type": "string",
+      "description": "A user-friendly message.",
+      "required": true
+    }
+  }
+}

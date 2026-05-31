@@ -1,0 +1,15 @@
+{
+  "name": "get_current_time",
+  "extention": "py",
+  "language": "python",
+  "code": "def get_current_time(location, format='12H', **kwargs):\n    print(\"CALLED: get_current_time\", \"\\nPASSED :\", location)\n    return \"7:30 AM\"",
+  "expected output": "string",
+  "description": "Getting the current time data for a location",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "description": "Location of the data",
+      "required": true
+    }
+  }
+}

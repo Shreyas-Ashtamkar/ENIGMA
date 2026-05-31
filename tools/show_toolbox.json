@@ -1,0 +1,9 @@
+{
+  "name": "show_toolbox",
+  "extention": "py",
+  "language": "python",
+  "code": "def show_toolbox(**kwargs):\n    print(\"CALLED: show_toolbox\", \"\\nPASSED :\", kwargs)\n    return \"Capabilities listed successfully.\"",
+  "expected output": "string",
+  "description": "Listing down the capabilities (the toolset) of this chatbot, in a user friendly way",
+  "parameters": {}
+}

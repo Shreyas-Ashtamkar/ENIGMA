@@ -1,0 +1,15 @@
+{
+  "name": "error",
+  "extention": "py",
+  "language": "python",
+  "code": "def error(error_message, **kwargs):\n    print(f\"CALLED: error\\nPASSED : {error_message}\")\n    return f\"ERROR : {error_message}\"",
+  "expected output": "string",
+  "description": "Responding with an error, with an error message",
+  "parameters": {
+    "error_message": {
+      "type": "string",
+      "description": "A user-friendly message notifying the user of the error",
+      "required": true
+    }
+  }
+}

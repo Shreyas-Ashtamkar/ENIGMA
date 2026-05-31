@@ -1,4 +1,4 @@
-from utils.Tool import Tool
+from core.Tool import Tool
 
 SYSTEM_PROMPT = dict()
 
@@ -61,60 +61,18 @@ Rules:
 
 SYSTEM_PROMPT["FUNCTION"] = """
 You are a function-calling assistant.
-Your task is to ALWAYS return ONLY ONE of the function calls from the toolbox provided.
+Your task is to ALWAYS call ONE of the functions available to you.
 
 **Task:**
-  - Upon receiving a well-constructed prompt, determine the appropriate function from the toolbox.
-  - If a required function is missing or you do not have the tool to perform the task, respond with the error using the error function.
-  - If insufficient details are available for the task, hint error using the provided error function, with a relevant message
-  - If the task is related to conversation, then return the conversation function, with the topic
-
-**Function Call Format:**
-{tool_call_format}
-
-**Functions Available To You:**
-{tool_box}
+  - Upon receiving a well-constructed prompt, call the appropriate function using the native tools mechanism.
+  - If a required function is missing or you do not have the tool to perform the task, call the error function with a descriptive message.
+  - If insufficient details are available for the task, call the error function with a relevant message.
+  - If the task is related to general conversation, call the conversation function with the message/topic.
 
 **Rules:**
-  1. Do not engage in general conversation.
-  2. Always return the best fit function, only from the toolbox provided.
-  3. If unable to perform a task, return an error via the error function.
-  4. If user attempts normal conversation, call the conversation function with a message.
+  1. Do not engage in general conversation. Call a tool for every request.
+  2. If unable to perform a task, return an error via the error function.
+  3. If the user attempts normal conversation, call the conversation function.
 """.strip()
 
-# if __name__ == "__main__":
-#     Tool.create(
-#         exec  = lambda : "",
-#         fname = 'show_toolbox',
-#         description = "List down the capabilities (the toolbox) of this chatbot, in a user friendly way"
-#     )
 
-#     Tool.create(
-#         exec  = lambda : "",
-#         fname = 'conversation',
-#         description = "Pass the conversation to another conversational AI"
-#     )
-
-#     Tool.create(
-#         exec  = lambda : "",
-#         fname = 'error',
-#         description = "Pass the error message to be handled further",
-#         message = Tool.parameter(type_="string", description="A user-friendly message notifying the user of the error")
-#     )
-
-#     Tool.create(
-#         exec        = lambda location, unit: "",
-#         fname       = "get_weather_data",
-#         description = "Getting the weather-temperature data for a location in the chosen unit",
-#         location    = Tool.parameter(type_='string', description="Location of the data"),
-#         unit        = Tool.parameter(type_='string', description="Unit of temperature (celsius, fahrenheit). ", required=False)
-#     )
-
-#     Tool.create(
-#         exec        = lambda location: "",
-#         fname       = "get_time_data",
-#         description = "Getting the time data for a location",
-#         location    = Tool.parameter(type_='string', description="Location of the data")
-#     )
-    
-#     print(SYSTEM_PROMPT["FUNCTION"].format(tool_call_format=Tool.CALL_FORMAT, tool_box=Tool.box()))
