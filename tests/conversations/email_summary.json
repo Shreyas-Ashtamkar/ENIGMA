@@ -41,9 +41,6 @@
   ],
   "expected": {
     "request_type": "FUNCTION",
-    "tool": "send_email",
-    "tool_kwargs": {
-      "recipient": "user@example.com"
-    }
+    "tool": "error"
   }
 }

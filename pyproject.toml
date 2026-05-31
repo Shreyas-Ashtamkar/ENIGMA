@@ -1,0 +1,27 @@
+[tool.ruff]
+# Exclude environment, git, and cache folders
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+# Set line length and indentation properties
+line-length = 120
+indent-width = 4
+
+# Assume Python 3.10+
+target-version = "py310"
+
+[tool.ruff.lint]
+# Enable Pyflakes (F), pycodestyle (E/W), and isort import sorting (I)
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E701"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

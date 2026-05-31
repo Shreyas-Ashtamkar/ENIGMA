@@ -36,14 +36,14 @@
     },
     {
       "role": "user",
-      "content": "Now can you send an email to shreyas@example.com with the summary of what we discussed?"
+      "content": "Now can you send an email to u53risR9al@example.com with the summary of what we discussed?"
     }
   ],
   "expected": {
     "request_type": "FUNCTION",
     "tool": "send_email",
     "tool_kwargs": {
-      "recipient": "shreyas@example.com"
+      "recipient": "u53risR9al@example.com"
     }
   }
 }
