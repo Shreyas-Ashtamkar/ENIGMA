@@ -1,19 +1,34 @@
 import json
-from core.settings import default_settings, Settings
-from core.ai import _Request, _format_message
-from core.Tool import Tool
-from core.config import get_ai_agents
-from core.logging import logging
-from aitools import get_conversation_summary
 
-class EnigmaSystem:
+from core.config import Settings, default_settings
+from core.jarvis import _format_message, get_ai_agents
+from core.logging import logging
+from core.tool import Tool
+
+
+class _Request:
+    VALID_TYPES = ["CONVERSATION", "FUNCTION"]
+    def __init__(self, type_="CONVERSATION", data_="") -> None:
+        if type_ not in _Request.VALID_TYPES:
+            type_ = "CONVERSATION"
+        self.type_ = type_
+        self.data_ = data_
+
+# ==========================================
+# Orchestrator
+# ==========================================
+class Enigma:
     def __init__(self, settings: Settings = None, ai_agents = None):
         self.settings = settings or default_settings
         self.ai = ai_agents or get_ai_agents(self.settings)
 
     def recent_request_summarizer(self, conversation: list[dict[str, str]]) -> str:
         conversation_str = self._stringify_conversation(conversation)
-        summary = get_conversation_summary(conversation_str, self.ai.summary)
+        if len(conversation_str) < 1:
+            return "NO_SPECIFIC_TASK"
+        summary = self.ai.summary.simple_chat(conversation_str).split("\n")[0].strip()
+        logging.info("\n----------get_conversation_summary called----------")
+        logging.debug(summary)
         return summary
 
     def _stringify_conversation(self, conversation: list[dict[str, str]]) -> str:
@@ -23,19 +38,19 @@ class EnigmaSystem:
             role, content = message['role'], message['content']
             if role == "system": continue
             string_conversation += f"\n{role}:{content}\n"
-        
+
         logging.debug(f"\n_stringify_conversation :\n{string_conversation}")
         return string_conversation.strip()
 
     def request_type_identifier(self, summary: str) -> _Request:
         request = _Request(type_="CONVERSATION", data_="")
-        
+
         if "NO_SPECIFIC_TASK" in summary:
             request.type_ = "CONVERSATION"
         elif "Do this - " in summary:
             request.type_ = "FUNCTION"
             request.data_ = summary.split("\n")[0][10:]
-        
+
         logging.info("\n------------request_type_identifier called-------------")
         logging.debug(f"Type:{request.type_} \nData:'{request.data_}'")
         return request
@@ -65,7 +80,7 @@ class EnigmaSystem:
         logging.info("\n------------chatter_box called-------------")
         if tool_response:
             tool_conversation = [
-                _format_message(f"{summary}", role='user'), 
+                _format_message(f"{summary}", role='user'),
                 _format_message(f"{tool_response}", role='user')
             ]
             chat_response = self.ai.responder.chat(tool_conversation)
@@ -82,7 +97,7 @@ class EnigmaSystem:
             summary = self.recent_request_summarizer(conversation)
             request = self.request_type_identifier(summary)
             chat_response = ""
-            
+
             if request.type_ == "FUNCTION":
                 tool_details = self.function_parser(request.data_)
                 tool_response = self.function_executer(tool_details)
@@ -92,8 +107,8 @@ class EnigmaSystem:
                     chat_response = self.chatter_box(conversation, summary=summary, tool_response=tool_response)
             else:
                 chat_response = self.chatter_box(conversation)
-                
-        except Exception as e: 
+
+        except Exception as e:
             if retry < self.settings.MAX_RETRY:
                 print("------------- Retry -------------")
                 chat_response = self.process(conversation, retry+1)
@@ -102,7 +117,7 @@ class EnigmaSystem:
         return chat_response
 
 # Instantiate default enigma instance for backward compatibility
-enigma = EnigmaSystem()
+enigma = Enigma()
 
 if __name__ == "__main__":
     chat_response = enigma.process([

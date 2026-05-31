@@ -1,6 +1,6 @@
 import logging
 
-from core.settings import default_settings, Settings
+from core.config import Settings, default_settings
 
 # Default configuration on import
 logging.basicConfig(level=default_settings.LOG_LEVEL, format='%(asctime)s - %(levelname)s - %(message)s')

@@ -4,7 +4,7 @@
   "language": "python",
   "code": "def send_email(recipient, subject=None, body=None, **kwargs):\n    print(f\"CALLED: send_email\\nPASSED : recipient={recipient}\\nsubject={subject}\\nbody={body}\")\n    return f\"Successfully sent email to {recipient} with subject '{subject}'\"",
   "expected output": "string",
-  "description": "Send an email with a subject and body content to a recipient email address. Use this whenever the user asks to email, send a mail, or email a summary.",
+  "description": "Send an email with a subject and body content to a recipient email address. Use this whenever the user asks to email, send a mail, or email a summary. Do NOT call this tool if the recipient's email address is missing or unknown. Instead, call the error tool to request the recipient email address.",
   "parameters": {
     "recipient": {
       "type": "string",

@@ -1,15 +1,16 @@
 import json
-import utils
-from typing import Callable, Any
-import streamlit as st
-from core.logging import logging
+from typing import Any, Callable
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
+
+from core.enigma import enigma
+from core.logging import logging
 
 INITIAL_CHATS:list[dict[str,str]] = [
     {
         'role': "assistant",
-        'content': f"Hello I am Enigma. How may I help you?.",
+        'content': "Hello I am Enigma. How may I help you?.",
     }
 ]
 
@@ -21,7 +22,7 @@ def init_chat():
     logging.info("---------------New Chat--------------------")
     logging.info("Called init_chat")
     st.session_state["chat_history"] = INITIAL_CHATS
-    
+
     return st.session_state["chat_history"]
 
 
@@ -68,7 +69,6 @@ with message_box:
         if msg['role'] != 'system':
             show_message(msg['role'], msg['content'])
 
-    if prompt := messages_container.chat_input(f"Type your message"):
+    if prompt := messages_container.chat_input("Type your message"):
         new_message(msg=prompt)
-        ai_reply(container=message_box, ai=utils.enigma.process)
-    
+        ai_reply(container=message_box, ai=enigma.process)
