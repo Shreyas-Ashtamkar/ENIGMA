@@ -1,0 +1,14 @@
+{
+  "name": "Uber Cab Booking Test",
+  "description": "Checks if requesting an Uber cab (which has no tool) triggers the error tool with an appropriate message.",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Book an uber cab for me to go home."
+    }
+  ],
+  "expected": {
+    "request_type": "FUNCTION",
+    "tool": "error"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "General Greeting Test",
+  "description": "Checks if the assistant responds to a chitchat greeting with a conversational response, rather than invoking any tools.",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Hey! How do you do?"
+    }
+  ],
+  "expected": {
+    "request_type": "CONVERSATION"
+  }
+}

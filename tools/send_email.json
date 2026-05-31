@@ -1,0 +1,25 @@
+{
+  "name": "send_email",
+  "extention": "py",
+  "language": "python",
+  "code": "def send_email(recipient, subject=None, body=None, **kwargs):\n    print(f\"CALLED: send_email\\nPASSED : recipient={recipient}\\nsubject={subject}\\nbody={body}\")\n    return f\"Successfully sent email to {recipient} with subject '{subject}'\"",
+  "expected output": "string",
+  "description": "Send an email with a subject and body content to a recipient email address. Use this whenever the user asks to email, send a mail, or email a summary.",
+  "parameters": {
+    "recipient": {
+      "type": "string",
+      "description": "The recipient email address",
+      "required": true
+    },
+    "subject": {
+      "type": "string",
+      "description": "The subject line of the email",
+      "required": false
+    },
+    "body": {
+      "type": "string",
+      "description": "The body content of the email",
+      "required": false
+    }
+  }
+}

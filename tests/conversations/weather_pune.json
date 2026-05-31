@@ -1,0 +1,25 @@
+{
+  "name": "Weather in Pune Test",
+  "description": "Checks if the assistant correctly identifies weather query, parses Pune as location, and calls get_weather_data.",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Hey GPT! What's up?"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello, Shreyas! I'm here and ready to help. How can I assist you today?"
+    },
+    {
+      "role": "user",
+      "content": "I'm trying to check how the weather will be today in the evening in Pune. Can you help?"
+    }
+  ],
+  "expected": {
+    "request_type": "FUNCTION",
+    "tool": "get_weather_data",
+    "tool_kwargs": {
+      "location": "Pune"
+    }
+  }
+}

@@ -16,6 +16,7 @@ Your abilities:
   - Create images based on a provided prompt.
   - Getting the current weather at a given location.
   - Getting the current time at a given location.
+  - Sending an email with a summary or custom message to a recipient.
   - Converse with the user.
   - Convey that something errored out.
 """.strip()
