@@ -4,7 +4,7 @@
   "language": "python",
   "code": "def error(error_message, **kwargs):\n    print(f\"CALLED: error\\nPASSED : {error_message}\")\n    return f\"ERROR : {error_message}\"",
   "expected output": "string",
-  "description": "Responding with an error, with an error message",
+  "description": "Call this to return an error when you do not have the tool or capability to perform the user's request (such as booking rides/cabs, ordering food), or if vital details are missing.",
   "parameters": {
     "error_message": {
       "type": "string",
