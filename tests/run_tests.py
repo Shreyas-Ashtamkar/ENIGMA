@@ -67,14 +67,14 @@ def run_test_case(file_path, verbose=False):
         try:
             test_data = json.load(f)
         except Exception as e:
-            return False, [f"Failed to parse JSON test file: {e}"]
+            return False, ([f"Failed to parse JSON test file: {e}"], None, None)
 
     test_name = test_data.get("name", os.path.basename(file_path))
     conversation = test_data.get("conversation", [])
     expected = test_data.get("expected", {})
 
     if not conversation:
-        return False, ["No conversation history provided in the test case."]
+        return False, (["No conversation history provided in the test case."], None, None)
 
     if verbose:
         print(f"\n{COLOR_CYAN}--- Running Test: {test_name} ---{COLOR_RESET}")
@@ -92,7 +92,13 @@ def run_test_case(file_path, verbose=False):
     except Exception as e:
         restore_enigma()
         tb = traceback.format_exc()
-        return False, [f"Enigma threw an exception during processing: {e}\n{tb}"]
+        captured = {
+            "request_type": actual_request.type_ if actual_request else None,
+            "tool": actual_tool_details.get("tool") if actual_tool_details else None,
+            "tool_kwargs": actual_tool_details.get("tool_kwargs", {}) if actual_tool_details else None,
+            "response": None
+        }
+        return False, ([f"Enigma threw an exception during processing: {e}\n{tb}"], expected, captured)
 
     restore_enigma()
 
@@ -142,7 +148,13 @@ def run_test_case(file_path, verbose=False):
         print(f"{COLOR_CYAN}--------------------------------------{COLOR_RESET}")
 
     if errors:
-        return False, errors
+        captured = {
+            "request_type": actual_request.type_ if actual_request else None,
+            "tool": actual_tool_details.get("tool") if actual_tool_details else None,
+            "tool_kwargs": actual_tool_details.get("tool_kwargs", {}) if actual_tool_details else None,
+            "response": chat_response if chat_response else None
+        }
+        return False, (errors, expected, captured)
     return True, duration
 
 
@@ -235,12 +247,21 @@ def main():
             print(f"[{COLOR_GREEN} PASS {COLOR_RESET}] {test_name} ({duration:.2f}s)\n")
         else:
             failed_count += 1
-            errors = result
+            errors, expected_data, captured_data = result
             print(f"[{COLOR_RED} FAIL {COLOR_RESET}] {test_name}")
             for err in errors:
                 print(f"        - {err}")
+            
+            if expected_data is not None:
+                print(f"\n        {COLOR_YELLOW}Expected Output:{COLOR_RESET}")
+                print(f"        {json.dumps(expected_data, indent=2).replace(chr(10), chr(10) + '        ')}")
+            
+            if captured_data is not None:
+                print(f"\n        {COLOR_YELLOW}Captured Output:{COLOR_RESET}")
+                print(f"        {json.dumps(captured_data, indent=2).replace(chr(10), chr(10) + '        ')}")
+                
             print()
-            failed_details.append((test_name, filename, errors))
+            failed_details.append((test_name, filename, errors, expected_data, captured_data))
 
     total_duration = time.time() - total_start_time
 
@@ -254,10 +275,18 @@ def main():
         print("\n" + "=" * 60)
         print(f"  {COLOR_RED}{COLOR_BOLD}Detailed Failures Summary:{COLOR_RESET}")
         print("=" * 60)
-        for name, filename, errors in failed_details:
+        for name, filename, errors, expected_data, captured_data in failed_details:
             print(f"\n{COLOR_BOLD}{name}{COLOR_RESET} ({filename})")
             for err in errors:
                 print(f"  {COLOR_RED}✗{COLOR_RESET} {err}")
+                
+            if expected_data is not None:
+                print(f"\n    {COLOR_YELLOW}Expected Output:{COLOR_RESET}")
+                print(f"    {json.dumps(expected_data, indent=2).replace(chr(10), chr(10) + '    ')}")
+            
+            if captured_data is not None:
+                print(f"\n    {COLOR_YELLOW}Captured Output:{COLOR_RESET}")
+                print(f"    {json.dumps(captured_data, indent=2).replace(chr(10), chr(10) + '    ')}")
         print("=" * 60)
         sys.exit(1)
     else:
