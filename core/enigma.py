@@ -1,129 +1,233 @@
-import json
+import os
+
+from openai import OpenAI
 
 from core.config import Settings, default_settings
-from core.jarvis import _format_message, get_ai_agents
 from core.logging import logging
+from core.slm import SLM
 from core.tool import Tool
 
 
-class _Request:
-    VALID_TYPES = ["CONVERSATION", "FUNCTION"]
-    def __init__(self, type_="CONVERSATION", data_="") -> None:
-        if type_ not in _Request.VALID_TYPES:
-            type_ = "CONVERSATION"
-        self.type_ = type_
-        self.data_ = data_
+def _load_prompt(filename: str) -> str:
+    """Load a prompt file from the prompts/ directory."""
+    prompts_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'prompts')
+    filepath = os.path.join(prompts_dir, filename)
+    if os.path.exists(filepath):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    return ""
 
-# ==========================================
-# Orchestrator
-# ==========================================
+
 class Enigma:
-    def __init__(self, settings: Settings = None, ai_agents = None):
+    """Orchestrator — enables small language models to perform tool calling
+    through a cooperative multi-stage pipeline.
+    
+    Stage 1: Intent Classification  (TASK or CONVERSATION)
+    Stage 2: Tool Selection         (pick from registered tools)
+    Stage 3: Parameter Extraction   (extract key=value pairs)
+    Stage 4: Tool Execution         (run the tool — no LLM)
+    Stage 5: Response Generation    (natural language reply)
+    """
+
+    def __init__(self, settings: Settings = None):
         self.settings = settings or default_settings
-        self.ai = ai_agents or get_ai_agents(self.settings)
+        client = OpenAI(base_url=self.settings.API_BASE, api_key=self.settings.API_KEY)
 
-    def recent_request_summarizer(self, conversation: list[dict[str, str]]) -> str:
-        conversation_str = self._stringify_conversation(conversation)
-        if len(conversation_str) < 1:
-            return "NO_SPECIFIC_TASK"
-        summary = self.ai.summary.simple_chat(conversation_str).split("\n")[0].strip()
-        logging.info("\n----------get_conversation_summary called----------")
-        logging.debug(summary)
-        return summary
+        # Stage 1 — Intent Classifier (fast, low-token)
+        self.intent_classifier = SLM(
+            model=self.settings.INTENT_MODEL,
+            system_prompt=_load_prompt('intent.md'),
+            client=client,
+            temperature=0,
+            max_tokens=20,
+        )
 
-    def _stringify_conversation(self, conversation: list[dict[str, str]]) -> str:
-        conversation = conversation[::-1][:3][::-1]
-        string_conversation = ""
-        for message in conversation:
-            role, content = message['role'], message['content']
-            if role == "system": continue
-            string_conversation += f"\n{role}:{content}\n"
+        # Stage 2 — Tool Selector (fast, low-token)
+        self.tool_selector = SLM(
+            model=self.settings.TOOL_SELECT_MODEL,
+            system_prompt=_load_prompt('tool_select.md'),
+            client=client,
+            temperature=0,
+            max_tokens=50,
+        )
 
-        logging.debug(f"\n_stringify_conversation :\n{string_conversation}")
-        return string_conversation.strip()
+        # Stage 3 — Parameter Extractor
+        self.param_extractor = SLM(
+            model=self.settings.PARAM_EXTRACT_MODEL,
+            system_prompt=_load_prompt('param_extract.md'),
+            client=client,
+            temperature=0,
+            max_tokens=256,
+        )
 
-    def request_type_identifier(self, summary: str) -> _Request:
-        request = _Request(type_="CONVERSATION", data_="")
+        # Stage 5 — Response Generator (conversational quality)
+        self.responder = SLM(
+            model=self.settings.RESPONSE_MODEL,
+            system_prompt=_load_prompt('response.md'),
+            client=client,
+            temperature=0.7,
+            max_tokens=512,
+        )
 
-        if "NO_SPECIFIC_TASK" in summary:
-            request.type_ = "CONVERSATION"
-        elif "Do this - " in summary:
-            request.type_ = "FUNCTION"
-            request.data_ = summary.split("\n")[0][10:]
+    # ── Helpers ──
 
-        logging.info("\n------------request_type_identifier called-------------")
-        logging.debug(f"Type:{request.type_} \nData:'{request.data_}'")
-        return request
+    def _get_last_user_message(self, conversation: list[dict]) -> str:
+        """Extract the most recent user message from conversation."""
+        for msg in reversed(conversation):
+            if msg['role'] == 'user':
+                return msg['content']
+        return ""
 
-    def function_parser(self, task: str):
-        tool_details = self.ai.tool.default_response
+    def _stringify_recent(self, conversation: list[dict], n: int = 3) -> str:
+        """Stringify the last n user/assistant messages for context."""
+        recent = conversation[-n:]
+        lines = []
+        for msg in recent:
+            if msg['role'] in ('user', 'assistant'):
+                lines.append(f"{msg['role']}: {msg['content']}")
+        return "\n".join(lines)
+
+    # ── Stage 1: Intent Classification ──
+
+    def classify_intent(self, conversation: list[dict]) -> str:
+        """Classify the user's intent as TASK or CONVERSATION."""
+        context = self._stringify_recent(conversation)
+        response = self.intent_classifier.ask(context)
+
+        logging.info(f"[INTENT] {response}")
+
+        if "TASK" in response.strip().upper():
+            return "TASK"
+        return "CONVERSATION"
+
+    # ── Stage 2: Tool Selection ──
+
+    def select_tool(self, user_message: str) -> str | None:
+        """Select the appropriate tool for the user's request."""
+        prompt = Tool.build_selection_prompt(user_message)
+        if prompt is None:
+            return None
+
+        response = self.tool_selector.ask(prompt)
+
+        logging.info(f"[TOOL_SELECT] {response}")
+
+        # Parse: take the first word, strip punctuation
+        tool_name = response.strip().lower().strip('"\'.!,').split('\n')[0].split(' ')[0]
+
+        if tool_name == 'none' or Tool.get(tool_name) is None:
+            return None
+        return tool_name
+
+    # ── Stage 3: Parameter Extraction ──
+
+    def extract_parameters(self, user_message: str, tool: Tool) -> dict:
+        """Extract parameter values from the user's message for the given tool."""
+        if not tool.params:
+            return {}
+
+        prompt = Tool.build_extraction_prompt(user_message, tool)
+        response = self.param_extractor.ask(prompt)
+
+        logging.info(f"[PARAM_EXTRACT] {response}")
+
+        # Parse key=value lines
+        params = {}
+        for line in response.strip().split('\n'):
+            line = line.strip().lstrip('- ')
+            if '=' not in line:
+                continue
+            key, _, value = line.partition('=')
+            key = key.strip()
+            value = value.strip()
+            if value and value != '__MISSING__':
+                params[key] = value
+
+        return params
+
+    # ── Stage 5: Response Generation ──
+
+    def generate_response(self, conversation: list[dict], tool_context: str = None) -> str:
+        """Generate a natural language response, optionally incorporating tool results."""
+        # Build clean message list (only user/assistant roles)
+        messages = []
+        for msg in conversation:
+            if msg['role'] in ('user', 'assistant'):
+                messages.append({'role': msg['role'], 'content': msg['content']})
+
+        # Inject tool context as a system-like user message
+        if tool_context:
+            messages.append({'role': 'user', 'content': tool_context})
+
+        response = self.responder.complete(messages)
+        logging.debug(f"[RESPONSE] {response}")
+        return response
+
+    # ── Main Pipeline ──
+
+    def process(self, conversation: list[dict]) -> str:
+        """Process a conversation through the full ENIGMA pipeline."""
         try:
-            tool_details:dict = json.loads(self.ai.tool.simple_chat(task))
+            # Stage 1: Intent Classification
+            intent = self.classify_intent(conversation)
+
+            if intent == "CONVERSATION":
+                return self.generate_response(conversation)
+
+            # Stage 2: Tool Selection
+            user_message = self._get_last_user_message(conversation)
+            tool_name = self.select_tool(user_message)
+
+            if tool_name is None:
+                # No matching tool — fall back to conversation
+                return self.generate_response(conversation)
+
+            tool = Tool.get(tool_name)
+
+            # Stage 3: Parameter Extraction
+            params = self.extract_parameters(user_message, tool)
+
+            # Validate required parameters
+            missing = tool.get_missing_required(params)
+            if missing:
+                missing_desc = ", ".join(missing)
+                tool_context = (
+                    f"The user asked to use the '{tool_name}' tool, but the following "
+                    f"required information is missing: {missing_desc}. "
+                    f"Please ask the user to provide the missing details politely."
+                )
+                return self.generate_response(conversation, tool_context=tool_context)
+
+            # Stage 4: Tool Execution (no LLM)
+            logging.info(f"[EXEC] Tool: {tool_name}, Params: {params}")
+            result = tool.execute(params)
+            logging.info(f"[EXEC] Result: {result}")
+
+            # Handle image results — return markdown directly
+            if isinstance(result, str) and result.startswith("IMAGE : "):
+                return result[8:]
+
+            # Handle tool errors
+            if isinstance(result, str) and result.startswith("TOOL_ERROR:"):
+                tool_context = (
+                    f"The user asked: \"{user_message}\"\n"
+                    f"I tried to use the '{tool_name}' tool but it failed with: {result}\n"
+                    f"Please let the user know something went wrong."
+                )
+                return self.generate_response(conversation, tool_context=tool_context)
+
+            # Stage 5: Response Generation with tool result
+            tool_context = (
+                f"The user asked: \"{user_message}\"\n"
+                f"I used the '{tool_name}' tool and got this result:\n{result}\n"
+                f"Please respond to the user with this information in a friendly, concise way."
+            )
+            return self.generate_response(conversation, tool_context=tool_context)
+
         except Exception as e:
-            print(e)
-        logging.info("\n------------function_parser called-------------")
-        logging.debug(tool_details)
-        return tool_details
+            logging.error(f"[PIPELINE_ERROR] {e}")
+            return "I'm sorry, I ran into an issue processing your request. Could you try again?"
 
-    def function_executer(self, tool_details: dict):
-        tool_name:str    = tool_details.get('tool')
-        tool_kwargs:dict = tool_details.get('tool_kwargs') or {}
-        tool = Tool.get(tool_name)
-        logging.info("\n------------function_executer called-------------")
-        if not tool:
-            return f"Error: Tool '{tool_name}' not found."
-        tool_response = tool.exec(**tool_kwargs)
-        logging.debug(tool_response)
-        return tool_response
 
-    def chatter_box(self, conversation: list[dict[str, str]], summary: str = "", tool_response: str = "") -> str:
-        logging.info("\n------------chatter_box called-------------")
-        if tool_response:
-            tool_conversation = [
-                _format_message(f"{summary}", role='user'),
-                _format_message(f"{tool_response}", role='user')
-            ]
-            chat_response = self.ai.responder.chat(tool_conversation)
-        else:
-            if len(conversation) > 0:
-                chat_response = self.ai.conversation.chat(conversation)
-            else:
-                chat_response = self.ai.conversation.chat([_format_message("Introduce yourself in a fun way in a single sentence.", "user")])
-        logging.debug(chat_response)
-        return chat_response
-
-    def process(self, conversation: list[dict[str, str]], retry=0, stream=False):
-        try:
-            summary = self.recent_request_summarizer(conversation)
-            request = self.request_type_identifier(summary)
-            chat_response = ""
-
-            if request.type_ == "FUNCTION":
-                tool_details = self.function_parser(request.data_)
-                tool_response = self.function_executer(tool_details)
-                if isinstance(tool_response, str) and "IMAGE : " in tool_response:
-                    chat_response = tool_response[8:]
-                else:
-                    chat_response = self.chatter_box(conversation, summary=summary, tool_response=tool_response)
-            else:
-                chat_response = self.chatter_box(conversation)
-
-        except Exception as e:
-            if retry < self.settings.MAX_RETRY:
-                print("------------- Retry -------------")
-                chat_response = self.process(conversation, retry+1)
-            else:
-                chat_response = self.ai.responder.chat([_format_message(str(e))])
-        return chat_response
-
-# Instantiate default enigma instance for backward compatibility
+# Default instance
 enigma = Enigma()
-
-if __name__ == "__main__":
-    chat_response = enigma.process([
-        {
-            'role' : 'user',
-            'content':"Generate an image of a playful baby elephant."
-        },
-    ])
-    print(chat_response)

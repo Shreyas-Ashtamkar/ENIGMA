@@ -1,7 +1,7 @@
 <img src="assets/images/Enigma_logo.jpeg" style="width:50em">
 </img>
 
-# E.N.I.G.M.A.
+# ENIGMA
 
 *Expert Network for Intelligent Guidance and Multi-task Assistance*
 ENIGMA is a smart system which uses multiple Expert-of-Domain AIs under the hood to handle various parts of a chat request to make somehthing like one large AI. ( Or one big Artificially Intelligent System )

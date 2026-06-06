@@ -13,7 +13,7 @@ if project_root not in sys.path:
 try:
     from core.enigma import enigma
 except ImportError as e:
-    print(f"Error importing E.N.I.G.M.A. modules: {e}")
+    print(f"Error importing ENIGMA modules: {e}")
     print("Please make sure you are running the tests from the project root directory or have configured your PYTHONPATH.")
     sys.exit(1)
 
@@ -30,8 +30,9 @@ actual_request = None
 actual_tool_details = None
 
 # Save original methods for patching/restoring
-orig_request_type_identifier = enigma.request_type_identifier
-orig_function_executer = enigma.function_executer
+orig_classify_intent = enigma.classify_intent
+from core.tool import Tool
+orig_tool_execute = Tool.execute
 
 def patch_enigma():
     """Monkey-patch EnigmaSystem to capture its internal decisions and stub tool side effects."""
@@ -39,26 +40,29 @@ def patch_enigma():
     actual_request = None
     actual_tool_details = None
 
-    def mock_request_type_identifier(summary):
+    def mock_classify_intent(conversation):
         global actual_request
-        req = orig_request_type_identifier(summary)
-        actual_request = req
-        return req
+        intent = orig_classify_intent(conversation)
+        class DummyReq:
+            def __init__(self, t):
+                self.type_ = t
+        actual_request = DummyReq(intent)
+        return intent
 
-    def mock_function_executer(tool_details):
+    def mock_tool_execute(self, params):
         global actual_tool_details
-        actual_tool_details = tool_details
-        tool_name = tool_details.get("tool", "unknown")
-        # Stub the tool response to avoid side-effects (e.g. sending real emails, writing files)
-        return f"Mocked execution response for tool '{tool_name}'"
+        actual_tool_details = {"tool": self.name, "tool_kwargs": params}
+        if self.name == "generate_image":
+            return f"IMAGE : ![{params.get('prompt')}](https://mock)"
+        return f"Mocked execution response for tool '{self.name}'"
 
-    enigma.request_type_identifier = mock_request_type_identifier
-    enigma.function_executer = mock_function_executer
+    enigma.classify_intent = mock_classify_intent
+    Tool.execute = mock_tool_execute
 
 def restore_enigma():
     """Restore EnigmaSystem to its original behavior."""
-    enigma.request_type_identifier = orig_request_type_identifier
-    enigma.function_executer = orig_function_executer
+    enigma.classify_intent = orig_classify_intent
+    Tool.execute = orig_tool_execute
 
 
 def run_test_case(file_path, verbose=False):
@@ -67,14 +71,14 @@ def run_test_case(file_path, verbose=False):
         try:
             test_data = json.load(f)
         except Exception as e:
-            return False, [f"Failed to parse JSON test file: {e}"]
+            return False, ([f"Failed to parse JSON test file: {e}"], None, None)
 
     test_name = test_data.get("name", os.path.basename(file_path))
     conversation = test_data.get("conversation", [])
     expected = test_data.get("expected", {})
 
     if not conversation:
-        return False, ["No conversation history provided in the test case."]
+        return False, (["No conversation history provided in the test case."], None, None)
 
     if verbose:
         print(f"\n{COLOR_CYAN}--- Running Test: {test_name} ---{COLOR_RESET}")
@@ -92,7 +96,13 @@ def run_test_case(file_path, verbose=False):
     except Exception as e:
         restore_enigma()
         tb = traceback.format_exc()
-        return False, [f"Enigma threw an exception during processing: {e}\n{tb}"]
+        captured = {
+            "request_type": actual_request.type_ if actual_request else None,
+            "tool": actual_tool_details.get("tool") if actual_tool_details else None,
+            "tool_kwargs": actual_tool_details.get("tool_kwargs", {}) if actual_tool_details else None,
+            "response": None
+        }
+        return False, ([f"Enigma threw an exception during processing: {e}\n{tb}"], expected, captured)
 
     restore_enigma()
 
@@ -142,7 +152,13 @@ def run_test_case(file_path, verbose=False):
         print(f"{COLOR_CYAN}--------------------------------------{COLOR_RESET}")
 
     if errors:
-        return False, errors
+        captured = {
+            "request_type": actual_request.type_ if actual_request else None,
+            "tool": actual_tool_details.get("tool") if actual_tool_details else None,
+            "tool_kwargs": actual_tool_details.get("tool_kwargs", {}) if actual_tool_details else None,
+            "response": chat_response if chat_response else None
+        }
+        return False, (errors, expected, captured)
     return True, duration
 
 
@@ -161,9 +177,9 @@ def main():
     # Lint check execution
     if "--lint" in sys.argv or "-l" in sys.argv:
         print("=" * 60)
-        print(f"  {COLOR_BOLD}E.N.I.G.M.A. Style and Code Quality Check (Ruff){COLOR_RESET}")
+        print(f"  {COLOR_BOLD}ENIGMA Style and Code Quality Check (Ruff){COLOR_RESET}")
         print("=" * 60)
-        print("Running linting checks on E.N.I.G.M.A. modules...")
+        print("Running linting checks on ENIGMA modules...")
 
         import subprocess
         ruff_path = os.path.join(project_root, ".venv", "bin", "ruff")
@@ -205,7 +221,7 @@ def main():
         sys.exit(0)
 
     print("=" * 60)
-    print(f"  {COLOR_BOLD}E.N.I.G.M.A. Automated Conversation Test Suite{COLOR_RESET}")
+    print(f"  {COLOR_BOLD}ENIGMA Automated Conversation Test Suite{COLOR_RESET}")
     print("=" * 60)
     print(f"Discovered {len(test_files)} test case(s). Running suite...\n")
 
@@ -235,12 +251,21 @@ def main():
             print(f"[{COLOR_GREEN} PASS {COLOR_RESET}] {test_name} ({duration:.2f}s)\n")
         else:
             failed_count += 1
-            errors = result
+            errors, expected_data, captured_data = result
             print(f"[{COLOR_RED} FAIL {COLOR_RESET}] {test_name}")
             for err in errors:
                 print(f"        - {err}")
+            
+            if expected_data is not None:
+                print(f"\n        {COLOR_YELLOW}Expected Output:{COLOR_RESET}")
+                print(f"        {json.dumps(expected_data, indent=2).replace(chr(10), chr(10) + '        ')}")
+            
+            if captured_data is not None:
+                print(f"\n        {COLOR_YELLOW}Captured Output:{COLOR_RESET}")
+                print(f"        {json.dumps(captured_data, indent=2).replace(chr(10), chr(10) + '        ')}")
+                
             print()
-            failed_details.append((test_name, filename, errors))
+            failed_details.append((test_name, filename, errors, expected_data, captured_data))
 
     total_duration = time.time() - total_start_time
 
@@ -254,10 +279,18 @@ def main():
         print("\n" + "=" * 60)
         print(f"  {COLOR_RED}{COLOR_BOLD}Detailed Failures Summary:{COLOR_RESET}")
         print("=" * 60)
-        for name, filename, errors in failed_details:
+        for name, filename, errors, expected_data, captured_data in failed_details:
             print(f"\n{COLOR_BOLD}{name}{COLOR_RESET} ({filename})")
             for err in errors:
                 print(f"  {COLOR_RED}✗{COLOR_RESET} {err}")
+                
+            if expected_data is not None:
+                print(f"\n    {COLOR_YELLOW}Expected Output:{COLOR_RESET}")
+                print(f"    {json.dumps(expected_data, indent=2).replace(chr(10), chr(10) + '    ')}")
+            
+            if captured_data is not None:
+                print(f"\n    {COLOR_YELLOW}Captured Output:{COLOR_RESET}")
+                print(f"    {json.dumps(captured_data, indent=2).replace(chr(10), chr(10) + '    ')}")
         print("=" * 60)
         sys.exit(1)
     else:

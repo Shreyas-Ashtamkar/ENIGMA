@@ -40,7 +40,7 @@
     }
   ],
   "expected": {
-    "request_type": "FUNCTION",
-    "tool": "error"
+    "request_type": "TASK",
+    "tool": null
   }
 }

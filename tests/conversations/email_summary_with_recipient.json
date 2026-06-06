@@ -40,7 +40,7 @@
     }
   ],
   "expected": {
-    "request_type": "FUNCTION",
+    "request_type": "TASK",
     "tool": "send_email",
     "tool_kwargs": {
       "recipient": "u53risR9al@example.com"
