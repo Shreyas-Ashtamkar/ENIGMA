@@ -1,0 +1,12 @@
+{
+  "name": "get_tool",
+  "code": "def get_tool(tool_name, **kwargs):\n    from core.tool import Tool\n    import json\n    if tool_name == 'list-all':\n        return ', '.join(Tool.list_all())\n    else:\n        tool = Tool.get(tool_name)\n        if tool:\n            properties = {}\n            for p_name, p_details in tool.params.items():\n                properties[p_name] = {\n                    'type': p_details.get('type', 'string'),\n                    'description': p_details.get('description', '')\n                }\n            return f\"Tool Name: {tool.name}\\nDescription: {tool.description}\\nParameters: {json.dumps(properties)}\"\n        else:\n            return f\"Error: Tool '{tool_name}' not found.\"",
+  "description": "Look up available tools. Use 'list-all' to list all tools, or pass a specific tool name to get its details.",
+  "parameters": {
+    "tool_name": {
+      "type": "string",
+      "description": "Either 'list-all' to list all available tools, or the specific name of a tool to get its details.",
+      "required": true
+    }
+  }
+}

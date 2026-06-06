@@ -1,2 +1,2 @@
-# Developer dependencies for E.N.I.G.M.A.
+# Developer dependencies for ENIGMA
 ruff

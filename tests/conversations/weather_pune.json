@@ -16,7 +16,7 @@
     }
   ],
   "expected": {
-    "request_type": "FUNCTION",
+    "request_type": "TASK",
     "tool": "get_weather_data",
     "tool_kwargs": {
       "location": "Pune"

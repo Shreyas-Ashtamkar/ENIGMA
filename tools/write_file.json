@@ -1,19 +1,16 @@
 {
   "name": "write_file",
-  "extention": "py",
-  "language": "python",
-  "code": "def write_file(filepath, content, **kwargs):\n    print(\"CALLED: write_file\", \"\\nPASSED :\", filepath)\n    return f\"Wrote to {filepath}\"",
-  "expected output": "string",
-  "description": "Write contents to a file",
+  "code": "def write_file(filepath, content, **kwargs):\n    return f\"Wrote to {filepath}\"",
+  "description": "Write content to a file.",
   "parameters": {
     "filepath": {
       "type": "string",
-      "description": "Path to the file",
+      "description": "Path to the file to write.",
       "required": true
     },
     "content": {
       "type": "string",
-      "description": "Content to write",
+      "description": "The content to write to the file.",
       "required": true
     }
   }
