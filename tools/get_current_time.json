@@ -1,14 +1,11 @@
 {
   "name": "get_current_time",
-  "extention": "py",
-  "language": "python",
-  "code": "def get_current_time(location, format='12H', **kwargs):\n    print(\"CALLED: get_current_time\", \"\\nPASSED :\", location)\n    return \"7:30 AM\"",
-  "expected output": "string",
-  "description": "Getting the current time data for a location",
+  "code": "def get_current_time(location, **kwargs):\n    from datetime import datetime\n    return f\"Current time request for {location}. Actual time: {datetime.now().strftime('%I:%M %p')}\"",
+  "description": "Get the current time for a given location.",
   "parameters": {
     "location": {
       "type": "string",
-      "description": "Location of the data",
+      "description": "The location to get the time for.",
       "required": true
     }
   }

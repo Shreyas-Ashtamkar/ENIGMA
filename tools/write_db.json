@@ -1,14 +1,11 @@
 {
   "name": "write_db",
-  "extention": "py",
-  "language": "python",
-  "code": "def write_db(query, **kwargs):\n    print(\"CALLED: write_db\", \"\\nPASSED :\", query)\n    return f\"Executed {query}\"",
-  "expected output": "string",
-  "description": "Write to a database",
+  "code": "def write_db(query, **kwargs):\n    return f\"Executed {query}\"",
+  "description": "Write to a database.",
   "parameters": {
     "query": {
       "type": "string",
-      "description": "Database query",
+      "description": "The database query to execute.",
       "required": true
     }
   }

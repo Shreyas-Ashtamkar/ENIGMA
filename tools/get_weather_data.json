@@ -1,24 +1,16 @@
 {
   "name": "get_weather_data",
-  "extention": "py",
-  "language": "python",
-  "code": "def get_weather_data(location, unit='Celcius', **kwargs):\n    import json\n    print(f\"CALLED: get_weather_data\\nPASSED : location={location}, unit={unit}\")\n    weather_data = {\n        \"temperature-high\" : f\"30 {unit}\",\n        \"temperature-low\"  : f\"20 {unit}\",\n        \"sky\": \"Clear\",\n        \"rains\" : \"Slight Possibility\"\n    }\n    return json.dumps(weather_data)",
-  "expected output": {
-    "temperature-high": "string",
-    "temperature-low": "string",
-    "sky": "string",
-    "rains": "string"
-  },
-  "description": "Getting the weather-temperature data for a location in the chosen unit",
+  "code": "def get_weather_data(location, unit='Celsius', **kwargs):\n    import json\n    weather_data = {\n        \"temperature-high\": f\"30 {unit}\",\n        \"temperature-low\": f\"20 {unit}\",\n        \"sky\": \"Clear\",\n        \"rains\": \"Slight Possibility\"\n    }\n    return json.dumps(weather_data)",
+  "description": "Get weather and temperature data for a location.",
   "parameters": {
     "location": {
       "type": "string",
-      "description": "Location of the data",
+      "description": "The location to get weather data for.",
       "required": true
     },
     "unit": {
       "type": "string",
-      "description": "Unit of temperature (celsius, fahrenheit).",
+      "description": "Unit of temperature — celsius or fahrenheit.",
       "required": false
     }
   }

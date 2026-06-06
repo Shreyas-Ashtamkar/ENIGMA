@@ -1,14 +1,11 @@
 {
   "name": "generate_image",
-  "extention": "py",
-  "language": "python",
-  "code": "def generate_image(prompt, **kwargs):\n    _IMAGE_GENERATION_URL = \"IMAGE : ![{prompt}](https://image.pollinations.ai/prompt/{prompt}?width=1600&height=1200&nologo=poll&nofeed=yes)\"\n    image_path = _IMAGE_GENERATION_URL.format(prompt=prompt.replace(\" \", \"%20\"))\n    return image_path",
-  "expected output": "string",
-  "description": "Create images based on the user-provided prompt.",
+  "code": "def generate_image(prompt, **kwargs):\n    from urllib.parse import quote\n    url = f\"https://image.pollinations.ai/prompt/{quote(prompt)}?width=1600&height=1200&nologo=poll&nofeed=yes\"\n    return f\"IMAGE : ![{prompt}]({url})\"",
+  "description": "Create an image based on a text prompt.",
   "parameters": {
     "prompt": {
       "type": "string",
-      "description": "The prompt provided by the user on basis of which the image will be created.",
+      "description": "The prompt describing the image to generate.",
       "required": true
     }
   }

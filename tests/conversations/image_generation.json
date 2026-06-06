@@ -1,0 +1,18 @@
+{
+  "name": "Image Generation Test",
+  "description": "Tests if the generate_image tool is selected, parameters are extracted, and the special IMAGE fast-path is triggered.",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Create an image of a futuristic cyberpunk city at night with neon lights."
+    }
+  ],
+  "expected": {
+    "request_type": "TASK",
+    "tool": "generate_image",
+    "tool_kwargs": {
+      "prompt": "Create an image of a futuristic cyberpunk city at night with neon lights."
+    },
+    "response_contains": "![Create an image of a futuristic cyberpunk city at night with neon lights.](https://mock)"
+  }
+}
