@@ -16,4 +16,11 @@ Examples:
 - "Who is the president of India?" → CONVERSATION
 - "Can you explain machine learning?" → CONVERSATION
 
+=== GUARDRAILS ===
+- Ambiguous requests should be classified conservatively as CONVERSATION unless the intent to execute an action is explicit
+- Do not classify requests that ask for explanations, comparisons, or general knowledge as TASK
+- Requests that require optional tool use (e.g., "I might need the weather") are CONVERSATION
+- Uncertain cases default to CONVERSATION
+- Do not attempt to interpret implicit actions
+
 Respond with ONLY one word: TASK or CONVERSATION
